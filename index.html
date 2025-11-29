@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>食字老虎機</title>
+<style>
+  body {font-family:"Noto Sans TC",sans-serif;margin:0;background:linear-gradient(180deg,#fffbe6,#e6f9ff);padding:20px 0;}
+  h1 {text-align:center;padding:1.5em 0 0.5em;font-size:2.8em;color:#e74c3c;margin:0;}
+  .card {max-width:700px;margin:0 auto;background:#fff;border-radius:30px;box-shadow:0 20px 60px rgba(0,0,0,0.2);padding:3em 2em;text-align:center;}
+  .slots {display:flex;justify-content:center;gap:35px;font-size:4em;margin:70px auto;
+          background:#000;padding:60px 35px;border-radius:45px;width:96%;max-width:680px;
+          box-shadow:inset 0 30px 60px #000000, 0 30px 70px rgba(0,0,0,0.8);}
+  .slot {color:#fff;font-weight:900;text-shadow:0 8px 20px #000;width:170px;height:190px;
+         display:flex;align-items:center;justify-content:center;border-radius:28px;
+         background:linear-gradient(145deg,#333,#000);}
+  .spinning {animation:spin 0.06s linear infinite;}
+  @keyframes spin {from{transform:translateY(0)}to{transform:translateY(-2200px)}}
+  .bigbtn {font-size:2.6em;padding:1em 3.5em;background:#e74c3c;border:none;border-radius:40px;color:#fff;}
+  #output {background:#fff8e1;border-radius:30px;padding:2.5em;margin:2em 0;
+           font-size:2.6em;line-height:1.4;box-shadow:0 15px 40px rgba(0,0,0,0.2);animation:pop 0.9s;}
+  #output b {color:#e74c3c;font-size:1.4em;}
+  #shareBtn {background:#9b59b6;padding:1.2em 3em;border-radius:22px;font-size:1.5em;margin-top:1em;}
+  #leaderboard {margin-top:3em;background:#f9f9f9;border-radius:20px;padding:1.5em;font-size:1.4em;max-height:400px;overflow-y:auto;}
+  .rank {margin:0.8em 0;padding:0.8em;background:white;border-radius:15px;box-shadow:0 4px 15px rgba(0,0,0,0.1);}
+  .rank span {font-weight:bold;color:#e74c3c;margin-right:8px;}
+  @keyframes pop {0%{transform:scale(0) rotate(-240deg)}100%{transform:scale(1) rotate(0)}}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1>食字老虎機</h1>
+  <p style="font-size:1.6em;margin-bottom:2em;">
+    用我哋數據入面嘅關鍵詞，<br>組成你獨一無二嘅食字活動名稱！
+  </p>
+
+  <div class="slots">
+    <div id="slot1" class="slot">夏</div>
+    <div id="slot2" class="slot">日</div>
+    <div id="slot3" class="slot">繽Fun</div>
+  </div>
+
+  <button onclick="spin()" class="bigbtn" id="spinBtn">大力拉！！</button>
+
+  <div id="output" class="hidden"></div>
+  <button id="shareBtn" class="hidden" onclick="shareResult()">分享你嘅結果 上榜！</button>
+
+  <!-- 排行榜標題改咗 -->
+  <div id="leaderboard">
+    <h2>睇吓大家拉到嘅結果！</h2>
+    <div id="list"></div>
+  </div>
+</div>
+
+<script>
+const col1 = ["同尋", "童行", "共創", "區區", "夏日"];
+const col2 = ["晴Teen", "耆跡", "幸福", "傳耆", "繽Fun", "社區"];
+const col3 = ["一日遊", "放鬆日", "晚會", "計劃", "愛心日"];
+
+let spinning = false;
+let generatedName = "";
+let leaderboard = JSON.parse(localStorage.getItem("foodwordLeaderboard") || "[]");
+
+function spin(){
+  if(spinning) return;
+  spinning = true;
+  document.getElementById("spinBtn").disabled = true;
+  document.getElementById("output").classList.add("hidden");
+  document.getElementById("shareBtn").classList.add("hidden");
+
+  const s1 = document.getElementById("slot1");
+  const s2 = document.getElementById("slot2");
+  const s3 = document.getElementById("slot3");
+
+  s1.classList.add("spinning");
+  s2.classList.add("spinning");
+  s3.classList.add("spinning");
+
+  setTimeout(()=>{ stop(s1, col1); }, 1500);
+  setTimeout(()=>{ stop(s2, col2); }, 1900);
+  setTimeout(()=>{
+    stop(s3, col3);
+    setTimeout(showResult, 800);
+  }, 2300);
+}
+
+function stop(el, arr){
+  el.classList.remove("spinning");
+  el.textContent = arr[Math.floor(Math.random()*arr.length)];
+}
+
+function showResult(){
+  generatedName = document.getElementById("slot1").textContent +
+                  document.getElementById("slot2").textContent +
+                  document.getElementById("slot3").textContent;
+
+  const out = document.getElementById("output");
+  out.innerHTML = `<b>${generatedName}</b><br><small>你嘅結果</small>`;
+  out.classList.remove("hidden");
+  document.getElementById("shareBtn").classList.remove("hidden");
+  document.getElementById("spinBtn").disabled = false;
+  spinning = false;
+
+  if(Math.random()<0.4) confetti();
+}
+
+function shareResult(){
+  if(leaderboard.some(item => item.name === generatedName)) {
+    alert("呢個結果已經有人分享過啦～再拉過！");  
+    return;
+  }
+
+  const now = new Date().toLocaleString('zh-HK');
+  leaderboard.push({name: generatedName, time: now});
+  leaderboard.sort((a,b) => b.time.localeCompare(a.time));
+  if(leaderboard.length > 50) leaderboard = leaderboard.slice(0,50);
+
+  localStorage.setItem("foodwordLeaderboard", JSON.stringify(leaderboard));
+  renderLeaderboard();
+
+  navigator.clipboard.writeText(generatedName);
+  alert("已上榜＋已複製！\n" + generatedName + "\n即刻貼去Story／群組炫耀啦！");
+}
+
+function renderLeaderboard(){
+  const list = document.getElementById("list");
+  if(leaderboard.length === 0){
+    list.innerHTML = "<p>暫時未有人分享～快啲做第一個！</p>";
+    return;
+  }
+  list.innerHTML = leaderboard.map((item, i) => 
+    `<div class="rank"><span>${i<3 ? "TOP" : i+1}.</span> ${item.name} <small>— ${item.time}</small></div>`
+  ).join("");
+}
+
+renderLeaderboard();
+
+function confetti(){
+  const c = document.createElement("div");
+  c.style.cssText="position:fixed;inset:0;pointer-events:none;z-index:9999;";
+  document.body.appendChild(c);
+  for(let i=0;i<200;i++){
+    const s=document.createElement("div");
+    s.style.cssText=`position:absolute;width:12px;height:35px;
+                     background:${["#e74c3c","#f1c40f","#3498db","#2ecc71","#9b59b6"][~~(Math.random()*5)]};
+                     left:${Math.random()*100}vw;top:-30px;
+                     animation:fall 2.8s linear forwards;
+                     animation-delay:${Math.random()*1.8}s;
+                     transform:rotate(${Math.random()*360}deg);`;
+    c.appendChild(s);
+  }
+  setTimeout(()=>c.remove(),4800);
+}
+</script>
+<style>@keyframes fall{to{transform:translateY(120vh) rotate(1080deg);}}</style>
+</body>
+</html>
